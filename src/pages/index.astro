@@ -1,0 +1,3179 @@
+---
+import Layout from "../layouts/Layout.astro";
+
+const base = import.meta.env.BASE_URL;
+const withBase = (path: string) =>
+	`${base}${base.endsWith("/") ? "" : "/"}${path}`;
+const withBaseIfPresent = (path?: string) => (path ? withBase(path) : "");
+const paperUrl = withBase(
+	"openhlm/CoRL_2026_OpenHLM__An_Empirical_Recipe_for_Whole_Body_Humanoid_Loco_Manipulation.pdf",
+);
+const heroLinks = [
+	{ label: "Arxiv", href: "#", icon: "arxiv" },
+	{ label: "Paper", href: paperUrl, icon: "paper" },
+	{ label: "Code", href: "#", icon: "code" },
+	{ label: "Dataset", href: "#", icon: "dataset" },
+];
+
+const toc = [
+	{ href: "#wild", label: "In the wild" },
+	{ href: "#system_comparison", label: "Comparison with SOTA" },
+	{ href: "#benchmark", label: "HLM Tasks" },
+	{ href: "#controller", label: "Low-level controller" },
+	{ href: "#policy", label: "VLA policy design" },
+	{ href: "#cotrain", label: "Co-training" },
+];
+
+const benchmarkTasks = [
+	{
+		title: "Cola Placement",
+		file: "openhlm/video/12tasks/cola_placement.mp4",
+		family: "Pick-and-place with locomotion",
+	},
+	{
+		title: "Shelf Cup Transfer",
+		file: "openhlm/video/12tasks/shelf_cup_transfer.mp4",
+		family: "Whole-body workspace extension",
+	},
+	{
+		title: "Bottle Disposal",
+		file: "openhlm/video/12tasks/bottle_disposal.mp4",
+		family: "Body as manipulator",
+	},
+	{
+		title: "Jar Opening",
+		file: "openhlm/video/12tasks/jar_opening.mp4",
+		family: "Environmental constraint",
+	},
+	{
+		title: "Toy Stowing",
+		file: "openhlm/video/12tasks/toy_stowing.mp4",
+		family: "Body as manipulator",
+	},
+	{
+		title: "Sword Extraction",
+		file: "openhlm/video/12tasks/sword_extracting.mp4",
+		family: "Environmental constraint",
+	},
+	{
+		title: "Cart Pushing",
+		file: "openhlm/video/12tasks/cart_putting.mp4",
+		family: "Environmental constraint",
+	},
+	{
+		title: "Shuttlecock Setup",
+		file: "openhlm/video/12tasks/shuttlecock_setup.mp4",
+		family: "Environmental constraint",
+	},
+	{
+		title: "Pig Placement",
+		file: "openhlm/video/12tasks/pig_placement.mp4",
+		family: "Pick-and-place with locomotion",
+	},
+	{
+		title: "Gum Can Placement",
+		file: "openhlm/video/12tasks/gum_can_placement.mp4",
+		family: "Pick-and-place with locomotion",
+	},
+	{
+		title: "Shelf Cube Transfer",
+		file: "openhlm/video/12tasks/shelf_cube_transfer.mp4",
+		family: "Whole-body workspace extension",
+	},
+	{
+		title: "Pouring",
+		file: "openhlm/video/12tasks/pouring.mp4",
+		family: "Environmental constraint",
+	},
+];
+
+const taskFamilyClasses = {
+	"Pick-and-place with locomotion": "pick-place",
+	"Whole-body workspace extension": "workspace",
+	"Body as manipulator": "body",
+	"Environmental constraint": "constraint",
+} as const;
+
+const getTaskFamilyClass = (family: string) =>
+	taskFamilyClasses[family as keyof typeof taskFamilyClasses] ?? "default";
+
+const taskFamilyLabels = {
+	"pick-place": "Pick & Place",
+	workspace: "Workspace Extension",
+	body: "Body-as-Tool",
+	constraint: "Constraints",
+} as const;
+
+const getTaskFamilyLabel = (family: string) =>
+	taskFamilyLabels[
+		getTaskFamilyClass(family) as keyof typeof taskFamilyLabels
+	];
+const nbspUnit = (value: string) => value.replace(/ /g, "\u202f");
+
+const teleopMethods = [
+	{
+		name: "Decoupled Control",
+		compact: "Decoupled Control",
+		action: "21-D action",
+		videos: [
+			{
+				title: "Cola Placement",
+				src: "openhlm/video/ablation/decoupled_cola_placement.mp4",
+			},
+			{
+				title: "Shelf Cup Transfer",
+				src: "openhlm/video/ablation/decoupled_shelf_cup_transfer.mp4",
+			},
+		],
+	},
+	{
+		name: "VR 3-Point Teleoperation",
+		compact: "VR 3-Point",
+		action: "24-D action",
+		videos: [
+			{
+				title: "Cola Placement",
+				src: "openhlm/video/ablation/vr3pt_cola_placement.mp4",
+			},
+		],
+	},
+	{
+		name: "Joint-Based Whole-Body Teleop.",
+		compact: "Joint-Based Whole-Body",
+		action: "32-D action",
+		videos: [
+			{
+				title: "Cola Placement",
+				src: "openhlm/video/ablation/ours_cola_placement.mp4",
+			},
+			{
+				title: "Shelf Cup Transfer",
+				src: "openhlm/video/ablation/ours_shelf_cup_transfer.mp4",
+			},
+			{
+				title: "Bottle Disposal",
+				src: "openhlm/video/ablation/ours_bottle_disposal.mp4",
+			},
+		],
+	},
+];
+
+const teleopRows = [
+	{
+		method: "Decoupled Control",
+		values: {
+			cola: { progress: 66.7, time: 36.7, steps: 42.3 },
+			shelf: { progress: 93.3, time: 33.6, steps: 38.4 },
+			bottle: null,
+		},
+	},
+	{
+		method: "VR 3-Point Teleoperation",
+		values: {
+			cola: { progress: 40.0, time: 67.8, steps: 12.3 },
+			shelf: null,
+			bottle: null,
+		},
+	},
+	{
+		method: "Joint-Based Whole-Body Teleop.",
+		ours: true,
+		values: {
+			cola: { progress: 86.7, time: 40.2, steps: 12.0 },
+			shelf: { progress: 80.0, time: 41.8, steps: 10.5 },
+			bottle: { progress: 85.0, time: 29.7, steps: 10.3 },
+		},
+	},
+];
+
+const teleopTasks = [
+	{ key: "cola", label: "Cola Placement" },
+	{ key: "shelf", label: "Shelf Cup Transfer" },
+	{ key: "bottle", label: "Bottle Disposal" },
+] as const;
+const metricColumns = [
+	{
+		key: "progress",
+		label: "Prog.",
+		hint: "Task progress ↑",
+		unit: "%",
+		max: 100,
+	},
+	{
+		key: "time",
+		label: "Time",
+		hint: "Rollout duration ↓",
+		unit: " s",
+		max: 70,
+	},
+	{
+		key: "steps",
+		label: "Steps",
+		hint: "Footsteps per rollout ↓",
+		unit: "",
+		max: 45,
+	},
+] as const;
+
+const vlaBars = [
+	{ label: "Ours (Default)", value: 91.3, sem: 3.0, color: "#7b5ea7" },
+	{
+		label: "Random Action Projection",
+		value: 82.1,
+		sem: 3.9,
+		color: "#bf9f5a",
+		group: "interface",
+	},
+	{
+		label: "Humanoid-Native Ordering",
+		value: 87.1,
+		sem: 3.6,
+		color: "#d0b478",
+		group: "interface",
+	},
+	{
+		label: "Relative Actions",
+		value: 86.2,
+		sem: 5.0,
+		color: "#e0caa0",
+		group: "interface",
+	},
+	{
+		label: "No Proprioception",
+		value: 81.2,
+		sem: 5.4,
+		color: "#efe2c8",
+		group: "interface",
+	},
+	{
+		label: "PaliGemma Init",
+		value: 59.6,
+		sem: 7.1,
+		color: "#a06987",
+		group: "pretraining",
+	},
+	{
+		label: "Random Init",
+		value: 41.7,
+		sem: 7.0,
+		color: "#d4b3c4",
+		group: "pretraining",
+	},
+	{
+		label: "One-Step Flow",
+		value: 72.9,
+		sem: 5.7,
+		color: "#7e9568",
+		group: "inference",
+	},
+	{
+		label: "Drifting Model",
+		value: 70.8,
+		sem: 6.8,
+		color: "#bdd0a6",
+		group: "inference",
+	},
+];
+
+const cotrainSources = [
+	{
+		label: "Whole-Body Teleop",
+		image: "openhlm/image/Loco-Manip Teleop.png",
+		cost: "21 min / held-out task",
+		detail: "Full loco-manipulation teleop on the humanoid; the expensive oracle data source.",
+	},
+	{
+		label: "Stationary Teleop",
+		image: "openhlm/image/Stationary Teleop.png",
+		cost: "13 min / held-out task",
+		detail: "The same humanoid with feet planted: manipulation only, no locomotion—cheaper to collect.",
+	},
+	{
+		label: "HuMI",
+		image: "openhlm/image/Stationary HuMI.png",
+		cost: "7 min / held-out task",
+		detail: "A robot-free rig of hand-held UMI grippers and body-pose trackers; the humanoid stays out of the loop.",
+	},
+];
+
+const cotrainCapabilities = [
+	{
+		scope: "Motion-reuse held-out",
+		tasks: "Tasks 9-11",
+		need: "New objects + prompts",
+		stationary: "Near oracle",
+		humi: "Near oracle",
+	},
+	{
+		scope: "New-motion held-out",
+		tasks: "Task 12: Pouring",
+		need: "New vessel-tilt motion",
+		stationary: "Works",
+		humi: "Weak transfer",
+	},
+];
+
+const cotrainBars = [
+	{
+		label: "8-Task Baseline",
+		value: 36,
+		detail: "Trained only on Tasks 1–8, never on 9–11.",
+	},
+	{
+		label: "HuMI Co-Training",
+		value: 84,
+		detail: "Adds robot-free HuMI demos for Tasks 9–11.",
+	},
+	{
+		label: "Stationary Co-Training",
+		value: 89,
+		detail: "Adds feet-planted teleop demos for Tasks 9–11.",
+	},
+	{
+		label: "11-Task Teleop Oracle",
+		value: 96,
+		detail: "Full whole-body teleop on all tasks—the expensive upper bound.",
+	},
+];
+
+const systemMethods = [
+	{
+		name: "OpenHLM (HuMI Co-Training)",
+		short: "OpenHLM",
+		src: "openhlm/video/ablation/ours_fruits.mp4",
+		progress: 87.5,
+		time: "1.14 h",
+	},
+	{
+		name: "GR00T N1.6",
+		short: "GR00T",
+		src: "openhlm/video/ablation/GR00T_fruits.mp4",
+		progress: 57.5,
+		time: "2.70 h",
+	},
+	{
+		name: "Ψ₀",
+		short: "Ψ₀",
+		src: "openhlm/video/ablation/Psi0_fruits.mp4",
+		progress: 48.8,
+		time: "2.70 h",
+	},
+];
+---
+
+<Layout>
+	<main class="site-shell" id="top">
+		<nav class="sticky-nav" aria-label="Site navigation">
+			<a href="#top" class="brand">OpenHLM</a>
+			<div class="sticky-nav-links">
+				{toc.map((item) => <a href={item.href}>{item.label}</a>)}
+			</div>
+		</nav>
+
+		<header class="hero">
+			<video
+				class="hero-bg-video"
+				autoplay
+				muted
+				loop
+				playsinline
+				preload="metadata"
+				src={withBase("openhlm/video/OpenHLM.mp4")}></video>
+			<div class="hero-overlay"></div>
+			<section class="title-block">
+				<h1 style="text-align: center;">
+					<span class="purple">OpenHLM</span>
+					<span>An Empirical Recipe for Whole-Body</span><br />
+					<span>Humanoid Loco-Manipulation</span>
+				</h1>
+				<div class="hero-actions">
+					{
+						heroLinks.map((link) => (
+							<a
+								class="hero-link"
+								href={link.href}
+								aria-label={link.label}
+							>
+								<span
+									class={`hero-link-icon ${link.icon}`}
+									aria-hidden="true"
+								>
+									{link.icon === "arxiv" && (
+										<svg viewBox="0 0 24 24">
+											<path d="M6 4.5l12 15" />
+											<path d="M18 4.5l-12 15" />
+											<path d="M7.2 11.6l9.6-5.5" />
+										</svg>
+									)}
+									{link.icon === "paper" && (
+										<svg viewBox="0 0 24 24">
+											<path d="M8 3h6l4 4v14H8z" />
+											<path d="M14 3v5h4" />
+											<path d="M6 7h8v12H6z" />
+											<path d="M8 11h4" />
+											<path d="M8 14h4" />
+										</svg>
+									)}
+									{link.icon === "code" && (
+										<svg viewBox="0 0 24 24">
+											<path d="M9 19c-4.5 1.5-4.5-2.5-6-3m12 5v-3.4c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.3 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.3 4.3 0 0 0-.1-3.2s-1-.3-3.4 1.3a11.8 11.8 0 0 0-6.2 0C6.6 2.9 5.6 3.2 5.6 3.2a4.3 4.3 0 0 0-.1 3.2A4.6 4.6 0 0 0 4.2 9.6c0 4.7 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21" />
+										</svg>
+									)}
+									{link.icon === "dataset" && (
+										<svg viewBox="0 0 24 24">
+											<ellipse
+												cx="12"
+												cy="5"
+												rx="7"
+												ry="3"
+											/>
+											<path d="M5 5v6c0 1.7 3.1 3 7 3s7-1.3 7-3V5" />
+											<path d="M5 11v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6" />
+										</svg>
+									)}
+								</span>
+								<span>{link.label}</span>
+							</a>
+						))
+					}
+				</div>
+			</section>
+		</header>
+		<div class="hero-divider"></div>
+
+		<article class="content">
+			<section class="paper-section wild-section" id="wild">
+				<h2>A humanoid in the wild</h2>
+				<p>
+					<span class="purple"><strong>OpenHLM</strong></span> is a
+					recipe for whole-body humanoid loco-manipulation: it maps a
+					language instruction and the robot's observation images
+					into coordinated motion across every one of the
+					robot's degrees of freedom.
+				</p>
+				<p>
+					So what can it do? Mix in just 20 outdoor demos with our lab
+					data, and the humanoid moonlights as the campus
+					janitor—<strong>fully autonomous, outdoors, no mocap</strong>. As far as we know, no humanoid has done
+					this in the wild before.
+				</p>
+
+				<div class="wild-video">
+					<div class="wild-video-frame">
+						<video
+							autoplay
+							muted
+							loop
+							playsinline
+							controls
+							preload="metadata"
+							src={withBase(
+								"openhlm/video/ablation/outside_spirit_disposal.mp4",
+							)}></video>
+						<span class="speed-tag">autonomous 2x</span>
+					</div>
+				</div>
+			</section>
+			<section class="paper-section" id="system_comparison">
+				<h2>Comparison with SOTA</h2>
+				<p>
+					How does OpenHLM stack up against other humanoid VLAs? We
+					compare at the system level with two representative
+					baselines: <strong>GR00T N1.6</strong> and <strong
+						>Ψ₀</strong
+					>.
+				</p>
+				<p>
+					The evaluation is a challenging long-horizon task: the robot
+					walks between a low table, a medium table, and a tall shelf,
+					picking two language-specified fruits—one per hand—and
+					placing them into separate containers. This spans the
+					humanoid's full vertical workspace and requires language
+					grounding across 20 ordered fruit pairs. OpenHLM reaches
+					87.5% task progress using <strong
+						>less than half the demonstration time</strong
+					> of either baseline.
+				</p>
+
+				<div class="system-videos">
+					{
+						systemMethods.map((method) => (
+							<section class="system-card">
+								<div class="system-video-frame">
+									<video
+										autoplay
+										muted
+										loop
+										playsinline
+										controls
+										preload="metadata"
+										src={withBase(method.src)}
+									/>
+									<span class="speed-tag">autonomous 2x</span>
+								</div>
+								<div class="system-copy">
+									<h3
+										class={
+											method.name ===
+											"OpenHLM (HuMI Co-Training)"
+												? "method-title method-title-featured"
+												: "method-title"
+										}
+									>
+										{method.name ===
+										"OpenHLM (HuMI Co-Training)" ? (
+											<>
+												OpenHLM{" "}
+												<span class="method-title-sub">
+													(HuMI Co-Training)
+												</span>
+											</>
+										) : (
+											method.name
+										)}
+									</h3>
+									<p>{method.note}</p>
+									<div class="system-metrics">
+									<span>{nbspUnit(method.time)} demo time</span>
+									</div>
+									<div class="system-progress">
+										<div>
+											<span>Task Progress</span>
+											<strong>{method.progress}%</strong>
+										</div>
+										<div
+											class="system-progress-track"
+											style={`--progress-fill: ${method.progress}%`}
+										>
+										</div>
+									</div>
+								</div>
+							</section>
+						))
+					}
+				</div>
+			</section>
+
+			<section class="paper-section" id="benchmark">
+				<h2>HLM Tasks</h2>
+				<p>
+					Want more tasks? We introduce 12 language-conditioned tasks
+					that target different aspects of whole-body loco-manipulation
+					behavior, organized into four categories: <strong
+						class="family-mark family-pick-place"
+						data-family="pick-place"
+						tabindex="0"
+						>(1) pick-and-place with locomotion</strong
+					>, <strong class="family-mark family-workspace"
+						data-family="workspace"
+						tabindex="0"
+						>(2) whole-body workspace extension</strong
+					>, <strong class="family-mark family-body"
+						data-family="body"
+						tabindex="0"
+						>(3) using body parts as manipulators</strong
+					>, and
+					<strong
+						class="family-mark family-constraint"
+						data-family="constraint"
+						tabindex="0"
+						>(4) loco-manipulation under environmental
+						constraints</strong
+					>. OpenHLM achieves strong performance across all 12 tasks,
+					with <strong>average task progress exceeding 90%</strong>.
+				</p>
+
+				<div class="task-grid bleed">
+					{
+						benchmarkTasks.map((task, index) => (
+							<section
+								class="task-card"
+								data-family={getTaskFamilyClass(task.family)}
+							>
+								<div
+									class={`task-video family-${getTaskFamilyClass(
+										task.family,
+									)}`}
+								>
+									<video
+										autoplay
+										muted
+										loop
+										playsinline
+										controls
+										preload="metadata"
+										src={withBase(task.file)}
+									/>
+									<span class="family-tag">
+										{getTaskFamilyLabel(task.family)}
+									</span>
+									<span class="speed-tag">autonomous 2x</span>
+								</div>
+								<h3>{task.title}</h3>
+								<p>{String(index + 1).padStart(2, "0")} / 12</p>
+							</section>
+						))
+					}
+				</div>
+			</section>
+
+			<section class="paper-section overview">
+				<h2>How did we get here?</h2>
+				<p>
+					None of this comes from a single trick. We construct
+					<span class="purple"><strong>OpenHLM</strong></span> through
+					controlled experiments, one design decision at a time, in
+					three phases that build up to a concrete recipe for
+					whole-body humanoid loco-manipulation.
+				</p>
+				<p>
+					<strong>Low-level controller and teleoperation:</strong> how
+					to design the controller and its teleop interface for
+					high-quality whole-body demonstrations.
+					<strong>Whole-body VLA policy design:</strong> which
+					adaptations turn a VLA built for static and wheeled robots
+					into a whole-body humanoid policy.
+					<strong>Heterogeneous co-training:</strong> whether cheaper
+					data sources can extend the policy beyond what whole-body
+					teleop alone covers.
+				</p>
+				<img
+					class="teaser-figure"
+					src={withBase("openhlm/image/teaser.png")}
+					width="1066"
+					height="426"
+					alt="OpenHLM teaser figure"
+				/>
+			</section>
+
+			<section class="paper-section" id="controller">
+				<h2>Low-level controller and teleoperation</h2>
+				<p>
+					We follow a <strong>two-level hierarchical control
+					framework</strong>: a high-level policy (the operator during
+					data collection, the learned VLA at deployment) emits
+					reference whole-body commands, and a lightweight low-level
+					controller tracks them. With this framework fixed, the
+					interface between the two determines both what the operator
+					can express and what action space the VLA learns.
+				</p>
+				<p>
+					We compare three teleoperation methods representative of
+					recent humanoid systems: <strong>decoupled control</strong>
+					(dual-arm IK plus an RL lower-body controller tracking a
+					base-velocity and root-height command, 21-D), <strong
+						>VR 3-point</strong
+					> (head and wrist poses plus a navigation command, 24-D), and
+					<strong>joint-based whole-body teleoperation</strong> (a
+					portable motion-capture rig retargeted in real time to every
+					humanoid joint, 32-D). We collect matched demonstrations
+					under each interface and train one VLA per method.
+				</p>
+
+				<div class="interactive-table" data-teleop-chart>
+					<div class="chart-head">
+						<div
+							class="task-selector"
+							role="group"
+							aria-label="Task selector"
+						>
+							{
+								teleopTasks.map((task, index) => (
+									<button
+										class={index === 0 ? "active" : ""}
+										type="button"
+										data-task-option={task.key}
+									>
+										{task.label}
+									</button>
+								))
+							}
+						</div>
+						<div>
+							<h3>Teleop Method Comparison</h3>
+							<p>
+								Select a task to compare task progress, rollout
+								time, and footsteps. N/A marks tasks the
+								interface cannot express by construction.
+							</p>
+						</div>
+					</div>
+
+					<div class="metric-grid">
+						<div class="grid-label">Method</div>
+						{
+							metricColumns.map((metric) => (
+								<div class="grid-label metric">
+									<span>{metric.label}</span>
+									<small>{metric.hint}</small>
+								</div>
+							))
+						}
+						{
+							teleopRows.map((row) => (
+								<>
+									<div
+										class={`method-cell ${row.ours ? "is-ours" : ""}`}
+									>
+										{row.method}
+										{row.ours && (
+											<span class="ours-tag">(Ours)</span>
+										)}
+									</div>
+									{metricColumns.map((metric) => (
+										<div
+											class={`metric-cell ${row.ours ? "is-ours" : ""}`}
+											data-cell
+											data-values={JSON.stringify(
+												Object.fromEntries(
+													teleopTasks.map((task) => [
+														task.key,
+														row.values[task.key]?.[
+															metric.key
+														] ?? "",
+													]),
+												),
+											)}
+											data-unit={metric.unit}
+											data-max={metric.max}
+										>
+											<span class="metric-value" />
+											<i />
+										</div>
+									))}
+								</>
+							))
+						}
+					</div>
+				</div>
+
+				<div class="video-comparison">
+					{
+						teleopMethods.map((method) => (
+							<section class="video-panel" data-video-panel>
+								<div class="panel-topline">
+									<span>{method.action}</span>
+									<span data-panel-task>Cola Placement</span>
+								</div>
+								<div
+									class="video-slot"
+									data-video-map={JSON.stringify(
+										Object.fromEntries(
+											teleopTasks.map((task) => [
+												task.key,
+												withBaseIfPresent(
+													method.videos.find(
+														(video) =>
+															video.title ===
+															task.label,
+													)?.src,
+												),
+											]),
+										),
+									)}
+								>
+									<video
+										autoplay
+										muted
+										loop
+										playsinline
+										controls
+										preload="metadata"
+									/>
+									<div
+										class="video-unavailable"
+										aria-hidden="true"
+									>
+										<strong>N/A</strong>
+										<span>Not Supported</span>
+									</div>
+									<span class="speed-tag">autonomous 2x</span>
+								</div>
+								<h3>{method.compact}</h3>
+								<p>{method.claim}</p>
+							</section>
+						))
+					}
+				</div>
+				<p>
+					The numbers tell a clear story.
+					<strong>Joint-based whole-body teleoperation</strong> is the
+					only interface that completes all three tasks. The two
+					alternatives expose only a subset of the humanoid's degrees
+					of freedom, so tasks like a foot depressing a pedal or the
+					whole body squatting under a shelf are unreachable by
+					construction. Based on these results, we adopt joint-based
+					whole-body teleoperation as the data-collection interface
+					that all later phases build on.
+				</p>
+			</section>
+
+			<section class="paper-section" id="policy">
+				<h2>Whole-body VLA policy design</h2>
+				<p>
+					Existing VLAs bring vision-language reasoning and
+					manipulation priors, but nearly all target static or wheeled
+					dual-arm platforms—none were designed for humanoid
+					loco-manipulation. So how do we adapt one into a whole-body
+					humanoid policy, and which design choices actually matter? We
+					organize the exploration into three families: the <em>action and
+					proprioception interface</em>, the <em>role of pretraining</em>, and
+					<em>faster action generation</em>—ablating one component at a time on
+					a 4-task subset.
+				</p>
+
+				<div class="vla-chart" aria-label="VLA design ablations">
+					<div class="vla-axis" aria-hidden="true">
+						<span>100</span>
+						<span>75</span>
+						<span>50</span>
+						<span>25</span>
+						<span>0</span>
+					</div>
+					{
+						vlaBars.map((item) => (
+							<div
+								class={`vla-bar ${item.label.startsWith("Ours") ? "is-baseline" : ""}`}
+								data-group={item.group}
+							>
+								<div class="vla-bar-plot">
+									<i
+										class="vla-error"
+										style={`bottom: ${item.value - item.sem}%; height: ${item.sem * 2}%`}
+									/>
+									<i
+										class="vla-error-cap bottom"
+										style={`bottom: ${item.value - item.sem}%`}
+									/>
+									<i
+										class="vla-error-cap top"
+										style={`bottom: ${item.value + item.sem}%`}
+									/>
+									<div
+										class="vla-bar-fill"
+										style={`height: ${item.value}%; background: ${item.color}`}
+									>
+										<strong>
+											{item.value.toFixed(1)}%
+										</strong>
+									</div>
+								</div>
+								<span>{item.label}</span>
+							</div>
+						))
+					}
+				</div>
+
+				<div class="insight-grid">
+					<div data-insight="interface">
+						<span>Interface Adaptations Barely Matter</span>
+						<p>
+							Adapting π₀.₅'s action space to the humanoid involves
+							four choices: projection initialization, action
+							ordering, absolute vs. relative targets, and
+							proprioceptive input. Flipping any one produces only a
+							slight drop—no single choice is the bottleneck.
+						</p>
+					</div>
+					<div data-insight="pretraining">
+						<span>Non-Humanoid Pretraining Transfers</span>
+						<p>
+							Initialized from π₀.₅ (pretrained on dual-arm
+							robots), the policy reaches 91% task progress;
+							PaliGemma (same architecture, vision-language only)
+							drops to 60%; random init collapses to 42%. The
+							cross-embodiment gap is real, but dwarfed by the gap
+							between any robot pretraining and none.
+						</p>
+					</div>
+					<div data-insight="inference">
+						<span>Multi-Step Inference Wins</span>
+						<p>
+							Counterintuitively, both one-step alternatives reach
+							<em>lower</em> validation action MSE than π₀.₅'s
+							10-step flow matching—yet on the robot they
+							underperform it by ~20 task-progress points. So we
+							keep multi-step inference.
+						</p>
+					</div>
+				</div>
+			</section>
+
+			<section class="paper-section" id="cotrain">
+				<h2>Heterogeneous co-training</h2>
+				<p>
+					With the whole-body VLA established, scaling to every task
+					through loco-manipulation teleop is expensive. We turn to two
+					cheaper data sources and ask whether co-training can
+					incorporate them effectively: <strong>stationary
+					teleoperation</strong> (the same humanoid with feet planted,
+					manipulation only) and <strong>HuMI</strong> (robot-free
+					demonstrations captured with low-cost wearable devices). The
+					question is whether either can extend the policy to held-out
+					tasks that whole-body teleop never covers.
+				</p>
+
+				<div
+					class="cotrain-sources"
+					aria-label="Co-training data sources"
+				>
+					{
+						cotrainSources.map((source) => (
+							<section class="cotrain-source">
+								<div class="cotrain-icon-frame">
+									<img
+										src={withBase(source.image)}
+										alt={`${source.label} illustration`}
+										width="512"
+										height="512"
+									/>
+									</div>
+									<div>
+										<h3>{source.label}</h3>
+										<strong>{nbspUnit(source.cost)}</strong>
+										<p>{source.detail}</p>
+									</div>
+							</section>
+						))
+					}
+				</div>
+
+				<div class="cotrain-summary">
+					<div>
+						<span>
+							Task Progress<br />
+							on Held-Out Tasks 9–11
+						</span>
+						<p>
+							With the policy trained on whole-body teleop for Tasks
+							1–8, we co-train it with cheaper data on three held-out
+							tasks (9–11) that whole-body teleop never covers. Both
+							streams lift average progress on these tasks from 36%
+							to near the oracle—with no extra whole-body teleop.
+						</p>
+					</div>
+					<div class="cotrain-bars">
+						{
+							cotrainBars.map((item) => (
+								<div class="cotrain-bar">
+									<div>
+										<strong>{item.label}</strong>
+										<span>{item.value}%</span>
+									</div>
+									<div
+										class="cotrain-progress-track"
+										style={`--progress-fill: ${item.value}%`}
+									>
+									</div>
+									<p>{item.detail}</p>
+								</div>
+							))
+						}
+					</div>
+				</div>
+			</section>
+		</article>
+	</main>
+</Layout>
+
+<script is:inline>
+	const reduceMotion = window.matchMedia(
+		"(prefers-reduced-motion: reduce)",
+	).matches;
+
+	const setVideoSpeed = (video) => {
+		const rate = video.classList.contains("hero-bg-video") ? 1 : 2;
+		video.defaultPlaybackRate = rate;
+		video.playbackRate = rate;
+	};
+
+	const startMutedVideos = () => {
+		document.querySelectorAll("video").forEach((video) => {
+			video.muted = true;
+			video.playsInline = true;
+			setVideoSpeed(video);
+			video.play().catch(() => {});
+		});
+	};
+
+	if (document.readyState === "loading") {
+		document.addEventListener("DOMContentLoaded", startMutedVideos, {
+			once: true,
+		});
+	} else {
+		startMutedVideos();
+	}
+
+	const nav = document.querySelector(".sticky-nav");
+	const updateNavTone = () => {
+		if (!nav) return;
+		const threshold = Math.max(320, window.innerHeight * 0.9);
+		const fadeStart = Math.max(72, window.innerHeight * 0.08);
+		const fadeEnd = Math.max(150, window.innerHeight * 0.25);
+		const isScrolled = window.scrollY > threshold;
+		const fadeProgress = Math.min(
+			1,
+			Math.max(0, (window.scrollY - fadeStart) / (fadeEnd - fadeStart)),
+		);
+		const heroOpacity = isScrolled ? 1 : 1 - fadeProgress;
+		nav.classList.toggle("nav-scrolled", isScrolled);
+		nav.style.setProperty("--nav-opacity", String(heroOpacity));
+		nav.style.setProperty(
+			"--nav-pointer",
+			heroOpacity < 0.08 && !isScrolled ? "none" : "auto",
+		);
+	};
+	updateNavTone();
+	window.addEventListener("resize", updateNavTone, { passive: true });
+	window.addEventListener("scroll", updateNavTone, { passive: true });
+
+	const navLinks = [...document.querySelectorAll(".sticky-nav-links a")];
+	const navSections = navLinks
+		.map((link) => {
+			const id = link.getAttribute("href")?.slice(1);
+			const section = id ? document.getElementById(id) : null;
+			return section ? { link, section } : null;
+		})
+		.filter(Boolean);
+	let navJumpInProgress = false;
+
+	const updateActiveNavLink = () => {
+		if (navJumpInProgress) return;
+		const probeY = window.scrollY + window.innerHeight * 0.36;
+		let active = null;
+		navSections.forEach((item) => {
+			if (item.section.offsetTop <= probeY) {
+				active = item;
+			}
+		});
+
+		navLinks.forEach((link) => {
+			link.classList.toggle("active", active?.link === link);
+		});
+	};
+	updateActiveNavLink();
+	window.addEventListener("resize", updateActiveNavLink, { passive: true });
+	window.addEventListener("scroll", updateActiveNavLink, { passive: true });
+	navSections.forEach(({ link, section }) => {
+		link.addEventListener("click", (event) => {
+			event.preventDefault();
+			navJumpInProgress = true;
+			const navOffset = nav?.offsetHeight || 0;
+			const targetY = Math.max(
+				0,
+				section.getBoundingClientRect().top +
+					window.scrollY -
+					navOffset -
+					20,
+			);
+			history.pushState(null, "", link.getAttribute("href"));
+			navLinks.forEach((item) => {
+				item.classList.toggle("active", item === link);
+			});
+			window.scrollTo({ top: targetY, behavior: "smooth" });
+			updateNavTone();
+
+			const finishJump = () => {
+				navJumpInProgress = false;
+				navLinks.forEach((item) => {
+					item.classList.toggle("active", item === link);
+				});
+				window.removeEventListener("scrollend", finishJump);
+			};
+
+			if ("onscrollend" in window) {
+				window.addEventListener("scrollend", finishJump, { once: true });
+			} else {
+				window.setTimeout(finishJump, 900);
+			}
+		});
+	});
+
+	const chart = document.querySelector("[data-teleop-chart]");
+	if (chart) {
+		const taskButtons = chart.querySelectorAll("[data-task-option]");
+		const cells = chart.querySelectorAll("[data-cell]");
+		const panels = document.querySelectorAll("[data-video-panel]");
+
+		const parseMap = (raw) => {
+			try {
+				return JSON.parse(raw || "{}");
+			} catch {
+				return {};
+			}
+		};
+
+		const updateTeleopTask = (taskKey) => {
+			taskButtons.forEach((button) => {
+				button.classList.toggle(
+					"active",
+					button.dataset.taskOption === taskKey,
+				);
+			});
+
+			cells.forEach((cell) => {
+				const values = parseMap(cell.dataset.values);
+				const raw = values[taskKey];
+				const label = cell.querySelector(".metric-value");
+				const bar = cell.querySelector("i");
+				if (!raw) {
+					cell.classList.add("metric-na");
+					label.textContent = "N/A";
+					bar.style.setProperty("--metric-fill", "0%");
+					return;
+				}
+
+				cell.classList.remove("metric-na");
+				const value = Number(raw);
+				const unit = cell.dataset.unit || "";
+				const max = Number(cell.dataset.max || 100);
+				label.textContent = `${value.toFixed(1)}${unit}`;
+				bar.style.setProperty(
+					"--metric-fill",
+					`${Math.min((value / max) * 100, 100)}%`,
+				);
+			});
+
+			panels.forEach((panel) => {
+				const slot = panel.querySelector("[data-video-map]");
+				const video = panel.querySelector("video");
+				const taskLabel = panel.querySelector("[data-panel-task]");
+				if (!slot || !video) return;
+
+				const videoMap = parseMap(slot.dataset.videoMap);
+				const src = videoMap[taskKey];
+				const selectedButton = chart.querySelector(
+					`[data-task-option="${taskKey}"]`,
+				);
+				if (taskLabel && selectedButton) {
+					taskLabel.textContent = selectedButton.textContent.trim();
+				}
+
+				slot.classList.toggle("unavailable", !src);
+				if (!src) {
+					video.removeAttribute("src");
+					video.load();
+					return;
+				}
+
+				if (video.getAttribute("src") !== src) {
+					video.src = src;
+					video.load();
+				}
+				setVideoSpeed(video);
+				video.play().catch(() => {});
+			});
+		};
+
+		taskButtons.forEach((button) => {
+			button.addEventListener("click", () =>
+				updateTeleopTask(button.dataset.taskOption),
+			);
+		});
+
+		updateTeleopTask(taskButtons[0]?.dataset.taskOption || "cola");
+	}
+
+	const benchmarkSection = document.querySelector("#benchmark");
+	if (benchmarkSection) {
+		const familyMarks =
+			benchmarkSection.querySelectorAll("[data-family].family-mark");
+		const taskCards =
+			benchmarkSection.querySelectorAll("[data-family].task-card");
+
+		const highlightFamily = (family) => {
+			benchmarkSection.classList.add("is-family-filtering");
+			taskCards.forEach((card) => {
+				card.classList.toggle(
+					"is-family-highlighted",
+					card.dataset.family === family,
+				);
+			});
+			familyMarks.forEach((mark) => {
+				mark.classList.toggle(
+					"is-family-active",
+					mark.dataset.family === family,
+				);
+			});
+		};
+
+		const clearFamilyHighlight = () => {
+			benchmarkSection.classList.remove("is-family-filtering");
+			taskCards.forEach((card) =>
+				card.classList.remove("is-family-highlighted"),
+			);
+			familyMarks.forEach((mark) =>
+				mark.classList.remove("is-family-active"),
+			);
+		};
+
+		familyMarks.forEach((mark) => {
+			mark.addEventListener("mouseenter", () =>
+				highlightFamily(mark.dataset.family),
+			);
+			mark.addEventListener("focus", () =>
+				highlightFamily(mark.dataset.family),
+			);
+			mark.addEventListener("mouseleave", clearFamilyHighlight);
+			mark.addEventListener("blur", clearFamilyHighlight);
+		});
+	}
+
+	// Insight card ↔ VLA bar highlight
+	const vlaChart = document.querySelector(".vla-chart");
+	document.querySelectorAll("[data-insight]").forEach((card) => {
+		const group = card.dataset.insight;
+		const bars = document.querySelectorAll(
+			`.vla-bar[data-group="${group}"]`,
+		);
+		card.addEventListener("mouseenter", () => {
+			vlaChart?.classList.add("is-filtering");
+			bars.forEach((b) => b.classList.add("is-highlighted"));
+		});
+		card.addEventListener("mouseleave", () => {
+			vlaChart?.classList.remove("is-filtering");
+			bars.forEach((b) => b.classList.remove("is-highlighted"));
+		});
+	});
+</script>
+
+<style>
+	:global(:root) {
+		--purple: #7040a0;
+		--purple-deep: #28132f;
+		--purple-mid: #7a50a0;
+		--purple-line: #c4a6d8;
+		--paper: #fbf8fd;
+		--wash: #f0e5f6;
+		--ink-muted: #5b4564;
+		--amber: #b2822d;
+		--rose: #b23d68;
+		--sage: #5d7b4a;
+		--mauve-muted: #76528d;
+		--mauve-wash: #f4edf8;
+		--font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
+			"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+		--progress-track: #eee4f5;
+		--progress-gradient: linear-gradient(90deg, #7040a0 0%, #8758ad 52%, #b488cd 100%);
+		--family-pick: #7040a0;
+		--family-pick-bg: rgba(112, 64, 160, 0.18);
+		--family-pick-line: rgba(112, 64, 160, 0.62);
+		--family-workspace: #9c3f61;
+		--family-workspace-bg: rgba(156, 63, 97, 0.18);
+		--family-workspace-line: rgba(156, 63, 97, 0.62);
+		--family-body: #9a6a1f;
+		--family-body-bg: rgba(154, 106, 31, 0.2);
+		--family-body-line: rgba(154, 106, 31, 0.62);
+		--family-constraint: #5d7b4a;
+		--family-constraint-bg: rgba(93, 123, 74, 0.18);
+		--family-constraint-line: rgba(93, 123, 74, 0.62);
+	}
+
+	.site-shell {
+		min-height: 100vh;
+		background: #ffffff;
+		color: var(--purple);
+		overflow-x: hidden;
+		font-family: var(--font-sans);
+		font-size: 16px;
+	}
+
+	a {
+		text-decoration: none;
+	}
+
+	.sticky-nav {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		z-index: 100;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		height: 56px;
+		padding: 0 32px;
+		opacity: var(--nav-opacity, 1);
+		pointer-events: var(--nav-pointer, auto);
+		background: transparent;
+		backdrop-filter: none;
+		-webkit-backdrop-filter: none;
+		border-bottom: 0;
+		box-shadow: none;
+		font-family: var(--font-sans);
+		font-size: 16px;
+		transition:
+			background 180ms ease,
+			box-shadow 180ms ease,
+			opacity 80ms linear;
+	}
+
+	.sticky-nav::after {
+		display: none;
+	}
+
+	.sticky-nav.nav-scrolled {
+		background: rgba(255, 255, 255, 0.88);
+		backdrop-filter: blur(8px) saturate(118%);
+		-webkit-backdrop-filter: blur(8px) saturate(118%);
+		border-bottom: 1px solid rgba(112, 64, 160, 0.16);
+		box-shadow: none;
+	}
+
+	.sticky-nav.nav-scrolled::after {
+		display: none;
+	}
+
+	.brand {
+		display: inline-flex;
+		position: relative;
+		z-index: 1;
+		align-items: center;
+		height: 56px;
+		color: rgba(255, 255, 255, 0.95);
+		font-size: 22px !important;
+		font-weight: 700;
+		line-height: 1;
+		transition: color 180ms ease;
+	}
+
+	.sticky-nav.nav-scrolled .brand {
+		color: var(--purple);
+	}
+
+	.sticky-nav-links {
+		display: flex;
+		position: relative;
+		z-index: 1;
+		align-items: center;
+		gap: 6px;
+		height: 56px;
+	}
+
+	.sticky-nav-links a {
+		padding: 9px 12px;
+		border: 1px solid transparent;
+		border-radius: 999px;
+		color: rgba(255, 255, 255, 0.86);
+		transition:
+			background 160ms ease,
+			color 160ms ease,
+			border-color 160ms ease;
+	}
+
+	.sticky-nav.nav-scrolled .sticky-nav-links a {
+		border-color: transparent;
+		color: rgba(40, 19, 47, 0.76);
+	}
+
+	.sticky-nav-links a:hover {
+		background: rgba(112, 64, 160, 0.18);
+		border-color: rgba(199, 168, 255, 0.62);
+		color: #ffffff;
+	}
+
+	.sticky-nav-links a.active {
+		background: rgba(112, 64, 160, 0.32);
+		color: #ffffff;
+		font-weight: 600;
+	}
+
+	.sticky-nav.nav-scrolled .sticky-nav-links a:hover {
+		background: rgba(112, 64, 160, 0.08);
+		border-color: transparent;
+		color: rgba(40, 19, 47, 0.76);
+	}
+
+	.sticky-nav.nav-scrolled .sticky-nav-links a.active {
+		background: rgba(112, 64, 160, 0.18);
+		border-color: transparent;
+		color: var(--purple);
+	}
+
+	.video-tag,
+	.task-video .family-tag,
+	.task-selector button,
+	.panel-topline span,
+	.wild-video span {
+		font-family: var(--font-sans);
+		letter-spacing: normal;
+		text-transform: none;
+	}
+
+	.hero {
+		position: relative;
+		width: 100%;
+		min-height: 100vh;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		overflow: hidden;
+		padding: 72px 28px 68px;
+		box-sizing: border-box;
+	}
+
+	.hero-bg-video {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		border-radius: 0;
+		aspect-ratio: unset;
+		z-index: 0;
+	}
+
+	.hero-overlay {
+		position: absolute;
+		inset: 0;
+		background: rgba(10, 2, 16, 0.58);
+		z-index: 1;
+	}
+
+	.hero .title-block {
+		position: relative;
+		z-index: 2;
+		max-width: 1320px;
+		text-align: center;
+	}
+
+	.hero h1,
+	.hero h1 span {
+		color: #fff;
+	}
+
+	.hero h1 .purple {
+		color: rgba(255, 255, 255, 1) !important;
+		background: linear-gradient(
+			180deg,
+			#e9ddff 0%,
+			#d9c7ff 38%,
+			#b99ae8 72%,
+			#8e68c8 100%
+		);
+		background-clip: text;
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		filter: drop-shadow(0 0 8px rgba(112, 64, 160, 0.32))
+			drop-shadow(0 0 20px rgba(76, 39, 120, 0.2));
+	}
+
+	.hero .hero-link {
+		color: #fff;
+		border-color: rgba(255, 255, 255, 0.5);
+		background: rgba(255, 255, 255, 0.1);
+	}
+
+	.hero .hero-link:hover {
+		background: rgba(112, 64, 160, 0.28);
+		border-color: rgba(139, 94, 178, 0.72);
+	}
+
+	.hero .hero-link-icon svg {
+		stroke: #fff;
+	}
+
+	.hero-divider {
+		width: 100%;
+		height: 0;
+		background: transparent;
+	}
+
+	.title-block {
+		max-width: 1320px;
+	}
+
+	.purple {
+		display: inline;
+		color: var(--purple);
+	}
+
+	.eyebrow,
+	.section-kicker,
+	.video-tag,
+	.task-video .family-tag,
+	.panel-topline span,
+	.wild-video span {
+		margin: 0;
+		font-size: 12px;
+		color: var(--purple-mid);
+	}
+
+	h1,
+	h2,
+	h3 {
+		margin: 0;
+		font-family: var(--font-sans);
+		font-weight: 500;
+		letter-spacing: 0;
+		color: var(--purple-deep);
+	}
+
+	h1 {
+		margin-top: 34px;
+		max-width: 1320px;
+		font-size: clamp(32px, 3.1vw, 50px);
+		font-weight: 400;
+		line-height: 1.12;
+	}
+
+	h1 .purple {
+		display: block;
+		width: max-content;
+		max-width: 100%;
+		margin: 0 auto 8px;
+		padding-bottom: 0.04em;
+		font-size: clamp(120px, 10.8vw, 176px);
+		line-height: 1.06;
+		font-weight: 700;
+		letter-spacing: 0;
+		font-kerning: normal;
+		font-feature-settings: "kern" 1;
+		white-space: nowrap;
+	}
+
+	h1 span {
+		display: inline;
+	}
+
+	h2 {
+		font-size: clamp(28px, 3vw, 42px);
+		line-height: 1.12;
+		font-weight: 600;
+	}
+
+	h3 {
+		font-size: 24px;
+		line-height: 1.12;
+	}
+
+	.hero-actions {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 20px 24px;
+		margin-top: 34px;
+	}
+
+	.hero-link {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 12px;
+		min-width: 144px;
+		min-height: 56px;
+		padding: 0 24px;
+		border: 1px solid rgba(45, 35, 49, 0.12);
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.88);
+		box-shadow: 0 16px 30px rgba(42, 18, 52, 0.14);
+		color: #4a404c;
+		font-size: 20px;
+		line-height: 1;
+		transition:
+			background 160ms ease,
+			box-shadow 160ms ease,
+			transform 160ms ease;
+	}
+
+	.hero-link:hover {
+		background: rgba(255, 255, 255, 0.96);
+		box-shadow: 0 20px 36px rgba(42, 18, 52, 0.18);
+		transform: translateY(-1px);
+	}
+
+	.hero-link-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 24px;
+		height: 24px;
+		flex: 0 0 24px;
+		color: #514a53;
+	}
+
+	.hero-link-icon svg {
+		width: 24px;
+		height: 24px;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.8;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+
+	.teaser-wrap,
+	.task-video,
+	.video-panel video,
+	.system-card video,
+	.wild-video video {
+		background: #f2edf6;
+		box-shadow: 0 24px 72px rgba(74, 18, 86, 0.16);
+	}
+
+	.teaser-wrap {
+		position: relative;
+		margin-top: 48px;
+		border: 1px solid rgba(102, 8, 116, 0.22);
+		border-radius: 4px;
+		overflow: hidden;
+	}
+
+	video:not(.hero-bg-video) {
+		display: block;
+		width: 100%;
+		height: auto;
+		aspect-ratio: 16 / 9;
+		object-fit: cover;
+		border-radius: inherit;
+	}
+
+	.video-tag {
+		position: absolute;
+		left: 14px;
+		top: 14px;
+		width: fit-content;
+		padding: 7px 10px;
+		border: 1px solid rgba(255, 255, 255, 0.48);
+		border-radius: 4px;
+		background: rgba(251, 248, 253, 0.48);
+		backdrop-filter: blur(10px);
+		color: var(--purple);
+	}
+
+	.stat-band {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		max-width: 1180px;
+		margin: 0 auto;
+		padding: 0 28px 84px;
+	}
+
+	.stat-band div {
+		padding: 22px 24px;
+		border-top: 1px solid var(--purple-line);
+		border-bottom: 1px solid var(--purple-line);
+		border-left: 1px solid var(--purple-line);
+		background: rgba(255, 255, 255, 0.36);
+	}
+
+	.stat-band div:first-child {
+		border-radius: 4px 0 0 4px;
+	}
+
+	.stat-band div:last-child {
+		border-right: 1px solid var(--purple-line);
+		border-radius: 0 4px 4px 0;
+	}
+
+	.stat-band strong {
+		display: block;
+		font-family: var(--font-sans);
+		font-size: 42px;
+		line-height: 1;
+		font-weight: 500;
+	}
+
+	.stat-band span {
+		display: block;
+		margin-top: 10px;
+		line-height: 1.45;
+		color: var(--ink-muted);
+	}
+
+	.content {
+		max-width: 1040px;
+		margin: 0 auto;
+		padding: 0 28px 64px;
+	}
+
+	.paper-section {
+		scroll-margin-top: 78px;
+		padding: 88px 0 96px;
+		border-top: 1px solid var(--purple-line);
+	}
+
+	.paper-section:last-child {
+		padding-bottom: 48px;
+	}
+
+	.overview {
+		padding-top: 88px;
+	}
+
+	.paper-section > p:not(.section-kicker),
+	.chart-head p,
+	.video-panel p,
+	.insight-grid p,
+	.wide-note p,
+	.system-copy p,
+	.wild-video p {
+		font-size: 18px;
+		line-height: 1.72;
+		color: var(--ink-muted);
+	}
+
+	.paper-section > p:not(.section-kicker),
+	.chart-head p,
+	.video-panel p,
+	.insight-grid p,
+	.finding-strip p,
+	.cotrain-summary > div:first-child p,
+	.cotrain-bar p,
+	.wide-note p,
+	.system-copy p,
+	.wild-video p,
+	.stat-band span {
+		text-align: justify;
+		text-justify: inter-word;
+		hyphens: auto;
+		-webkit-hyphens: auto;
+	}
+
+	.paper-section > p:not(.section-kicker) {
+		margin: 28px 0 0;
+	}
+
+	.family-pick-place {
+		--family-color: var(--family-pick);
+		--family-bg: var(--family-pick-bg);
+		--family-line: var(--family-pick-line);
+	}
+
+	.family-workspace {
+		--family-color: var(--family-workspace);
+		--family-bg: var(--family-workspace-bg);
+		--family-line: var(--family-workspace-line);
+	}
+
+	.family-body {
+		--family-color: var(--family-body);
+		--family-bg: var(--family-body-bg);
+		--family-line: var(--family-body-line);
+	}
+
+	.family-constraint {
+		--family-color: var(--family-constraint);
+		--family-bg: var(--family-constraint-bg);
+		--family-line: var(--family-constraint-line);
+	}
+
+	.family-mark {
+		display: inline;
+		padding: 0 0.08em 0.03em;
+		border: 0;
+		background: linear-gradient(
+			to top,
+			var(--family-bg) 0 42%,
+			transparent 42% 100%
+		);
+		box-decoration-break: clone;
+		-webkit-box-decoration-break: clone;
+		color: var(--family-color);
+		font-weight: 700;
+		cursor: pointer;
+		outline: none;
+		transition:
+			background 160ms ease,
+			color 160ms ease,
+			filter 160ms ease;
+	}
+
+	.family-mark:focus-visible {
+		border-radius: 3px;
+		outline: 2px solid var(--family-line);
+		outline-offset: 2px;
+	}
+
+	.family-mark.is-family-active {
+		filter: saturate(1.18) brightness(0.94);
+	}
+
+	.pipeline-transition {
+		margin-top: 42px !important;
+	}
+
+	.teaser-figure {
+		display: block;
+		width: 100%;
+		height: auto;
+		margin-top: 36px;
+	}
+
+	.interactive-table,
+	.finding-strip,
+	.vla-chart,
+	.wide-note,
+	.video-panel,
+	.system-card,
+	.cotrain-source,
+	.capability-matrix,
+	.cotrain-summary,
+	.insight-grid div {
+		border-radius: 4px;
+	}
+
+	.bleed {
+		width: min(1660px, calc(100vw - 40px));
+		margin-left: 50%;
+		transform: translateX(-50%);
+	}
+
+	.task-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 16px;
+		margin-top: 42px;
+		width: min(1180px, calc(100vw - 56px));
+	}
+
+	.task-card {
+		min-width: 0;
+		transition:
+			opacity 180ms ease,
+			filter 180ms ease,
+			transform 180ms ease;
+	}
+
+	#benchmark.is-family-filtering .task-card {
+		opacity: 0.48;
+		filter: grayscale(0.22) saturate(0.86);
+	}
+
+	#benchmark.is-family-filtering .task-card.is-family-highlighted {
+		order: -1;
+		opacity: 1;
+		filter: none;
+	}
+
+	.task-video {
+		position: relative;
+		overflow: hidden;
+		border: 1px solid rgba(112, 64, 160, 0.52);
+		border-radius: 4px;
+		background: #f2edf6;
+		box-shadow:
+			inset 0 0 0 1px rgba(112, 64, 160, 0.22),
+			0 18px 42px rgba(74, 18, 86, 0.12);
+	}
+
+	.task-video .family-tag {
+		position: absolute;
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		left: 10px;
+		top: 10px;
+		max-width: calc(100% - 20px);
+		padding: 6px 9px 6px 8px;
+		border: 1px solid var(--family-line, rgba(112, 64, 160, 0.3));
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.8);
+		backdrop-filter: blur(10px);
+		color: var(--family-color, var(--purple));
+		font-size: 10px;
+		font-weight: 700;
+		line-height: 1.15;
+		box-shadow: 0 8px 18px rgba(32, 15, 38, 0.12);
+	}
+
+	.task-video .family-tag::before {
+		content: "";
+		width: 8px;
+		height: 8px;
+		flex: 0 0 8px;
+		border-radius: 50%;
+		background: var(--family-color, var(--purple));
+	}
+
+	.speed-tag {
+		position: absolute;
+		right: 10px;
+		bottom: 10px;
+		left: auto;
+		top: auto;
+		z-index: 3;
+		max-width: calc(100% - 20px);
+		padding: 6px 8px;
+		border-radius: 4px;
+		background: rgba(251, 248, 253, 0.76);
+		backdrop-filter: blur(10px);
+		color: var(--purple);
+		font-family: var(--font-sans);
+		font-size: 10px;
+
+		line-height: 1;
+
+		pointer-events: none;
+	}
+
+	.task-video .speed-tag {
+		left: auto;
+		top: auto;
+		right: 10px;
+		bottom: 10px;
+	}
+
+	.task-card h3 {
+		margin-top: 10px;
+		font-family: var(--font-sans);
+		font-size: 15px;
+		font-weight: 700;
+		color: var(--purple-deep);
+	}
+
+	.task-card p {
+		margin: 4px 0 0;
+		font-family: var(--font-sans);
+		font-size: 12px;
+		color: var(--purple-mid);
+	}
+
+	.interactive-table,
+	.finding-strip,
+	.vla-chart,
+	.wide-note {
+		margin-top: 34px;
+		border: 1px solid var(--purple-line);
+		background: rgba(255, 255, 255, 0.46);
+	}
+
+	.chart-head {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(220px, 260px);
+		align-items: stretch;
+		gap: 22px;
+		padding: 24px;
+		border-bottom: 1px solid var(--purple-line);
+		background: linear-gradient(
+			135deg,
+			rgba(255, 255, 255, 0.62),
+			rgba(246, 236, 249, 0.42)
+		);
+	}
+
+	.chart-head > div:not(.task-selector) {
+		order: -1;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+	}
+
+	.chart-head p {
+		max-width: 580px;
+		margin: 12px 0 0;
+		font-size: 15px;
+	}
+
+	.chart-head h3 {
+		font-size: 26px;
+		line-height: 1.1;
+		font-weight: 700;
+	}
+
+	.task-selector {
+		display: inline-flex;
+		flex-direction: column;
+		align-self: stretch;
+		justify-self: end;
+		width: 100%;
+		min-width: 210px;
+		gap: 3px;
+		padding: 5px;
+		border: 1px solid rgba(196, 166, 216, 0.82);
+		background: rgba(243, 234, 247, 0.82);
+		backdrop-filter: blur(10px) saturate(118%);
+		-webkit-backdrop-filter: blur(10px) saturate(118%);
+		border-radius: 8px;
+	}
+
+	.task-selector button {
+		position: relative;
+		flex: 1;
+		min-height: 36px;
+		border: 0;
+		padding: 0 12px 0 16px;
+		background: transparent;
+		color: var(--purple);
+		cursor: pointer;
+		text-align: left;
+		border-radius: 6px;
+		overflow: hidden;
+		transition:
+			background 160ms ease,
+			color 160ms ease,
+			transform 160ms ease;
+	}
+
+	.task-selector button::before {
+		content: "";
+		position: absolute;
+		left: 7px;
+		top: 9px;
+		bottom: 9px;
+		width: 3px;
+		border-radius: 999px;
+		background: var(--purple);
+		opacity: 0;
+		transform: scaleY(0.45);
+		transition:
+			opacity 160ms ease,
+			transform 160ms ease;
+	}
+
+	.task-selector button:hover {
+		background:
+			linear-gradient(
+				90deg,
+				rgba(112, 64, 160, 0.12),
+				rgba(244, 237, 248, 0.78)
+			);
+		color: var(--purple-deep);
+		transform: translateX(2px);
+	}
+
+	.task-selector button:hover::before {
+		opacity: 0;
+		transform: scaleY(0.45);
+	}
+
+	.task-selector button.active {
+		background: linear-gradient(90deg, var(--purple), #8758ad);
+		color: white;
+		transform: none;
+	}
+
+	.task-selector button.active::before {
+		background: rgba(255, 255, 255, 0.86);
+		opacity: 1;
+		transform: scaleY(1);
+	}
+
+	.metric-grid {
+		display: grid;
+		grid-template-columns: minmax(190px, 1.1fr) repeat(
+				3,
+				minmax(138px, 1fr)
+			);
+		grid-template-rows: 64px repeat(3, 92px);
+	}
+
+	.grid-label,
+	.method-cell,
+	.metric-cell {
+		min-height: 0;
+		padding: 15px 16px;
+		border-right: 1px solid var(--purple-line);
+		border-bottom: 1px solid var(--purple-line);
+	}
+
+	.grid-label:nth-child(4n),
+	.method-cell:nth-child(4n),
+	.metric-cell:nth-child(4n) {
+		border-right: 0;
+	}
+
+	.grid-label {
+		font-family: var(--font-sans);
+		font-size: 16px;
+		font-weight: 600;
+
+		color: var(--purple);
+	}
+
+	.grid-label.metric {
+		display: grid;
+		align-content: center;
+		gap: 5px;
+	}
+
+	.grid-label.metric small {
+		font-family: var(--font-sans);
+		font-size: 14px;
+		font-weight: 600;
+		letter-spacing: 0;
+		text-transform: none;
+		color: var(--purple-deep);
+	}
+
+	.method-cell {
+		font-weight: 700;
+		color: var(--purple-deep);
+	}
+
+	.method-cell.is-ours,
+	.metric-cell.is-ours {
+		background: rgba(102, 8, 116, 0.07);
+	}
+
+	.method-cell.is-ours {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 6px;
+		color: var(--purple);
+		box-shadow: inset 3px 0 0 var(--purple);
+	}
+
+	.ours-tag {
+		font-family: var(--font-sans);
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--purple);
+	}
+
+	.metric-cell {
+		display: grid;
+		align-content: center;
+		justify-items: start;
+		gap: 10px;
+	}
+
+	.metric-value {
+		font-family: var(--font-sans);
+		font-size: 25px;
+		color: var(--purple-deep);
+	}
+
+	.metric-cell i {
+		position: relative;
+		display: block;
+		width: 100%;
+		height: 8px;
+		background: var(--progress-track);
+		border-radius: 4px;
+		overflow: hidden;
+	}
+
+	.metric-cell i::after {
+		content: "";
+		position: absolute;
+		inset: 0 auto 0 0;
+		width: var(--metric-fill, 0%);
+		background: var(--progress-gradient);
+		border-radius: inherit;
+	}
+
+	.metric-cell.metric-na {
+		background: #fff;
+		color: var(--mauve-muted);
+	}
+
+	.metric-cell.metric-na .metric-value {
+		color: var(--mauve-muted);
+	}
+
+	.metric-cell.metric-na i {
+		display: none;
+	}
+
+	.video-comparison,
+	.system-videos {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 16px;
+		width: min(1240px, calc(100vw - 36px));
+		margin-top: 24px;
+		margin-left: 50%;
+		transform: translateX(-50%);
+	}
+
+	.video-panel,
+	.system-card {
+		border: 1px solid var(--purple-line);
+		background: rgba(255, 255, 255, 0.48);
+	}
+
+	.panel-topline {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 12px;
+		border-bottom: 1px solid var(--purple-line);
+	}
+
+	select {
+		min-width: 0;
+		max-width: 170px;
+		border: 1px solid var(--purple-line);
+		background: var(--paper);
+		color: var(--purple-deep);
+		padding: 7px 8px;
+		border-radius: 4px;
+	}
+
+	.video-slot {
+		position: relative;
+		overflow: hidden;
+		background: #eee9f0;
+		aspect-ratio: 16 / 9;
+	}
+
+	.video-slot video {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.video-unavailable {
+		display: none;
+		position: absolute;
+		inset: 0;
+		place-items: center;
+		align-content: center;
+		gap: 8px;
+		background: linear-gradient(135deg, #f7f1fa, #eee5f4);
+		color: var(--mauve-muted);
+		text-align: center;
+	}
+
+	.video-unavailable strong {
+		font-family: var(--font-sans);
+		font-size: 30px;
+		line-height: 1;
+		font-weight: 700;
+		color: var(--mauve-muted);
+	}
+
+	.video-unavailable span {
+		font-family: var(--font-sans);
+		font-size: 12px;
+		font-weight: 600;
+		letter-spacing: 0.02em;
+	}
+
+	.video-slot.unavailable video {
+		display: none;
+	}
+
+	.video-slot.unavailable .video-unavailable {
+		display: grid;
+	}
+
+	.video-slot.unavailable .speed-tag {
+		display: none;
+	}
+
+	.video-panel video,
+	.system-card video {
+		box-shadow: none;
+	}
+
+	.video-panel h3,
+	.video-panel p {
+		padding: 0 16px;
+	}
+
+	.video-panel h3 {
+		margin-top: 16px;
+		font-size: 22px;
+		line-height: 1.08;
+		font-weight: 600;
+	}
+
+	.video-panel p {
+		margin: 10px 0 18px;
+		font-size: 15px;
+		line-height: 1.52;
+	}
+
+	.finding-strip {
+		padding: 22px;
+	}
+
+	.finding-strip p {
+		margin: 0;
+		font-size: 16px;
+		line-height: 1.62;
+		color: var(--ink-muted);
+	}
+
+	.finding-strip p + p {
+		margin-top: 16px;
+	}
+
+	.finding-strip strong {
+		color: var(--purple-deep);
+	}
+
+	.vla-chart {
+		position: relative;
+		display: grid;
+		grid-template-columns: 44px repeat(9, minmax(82px, 1fr));
+		align-items: end;
+		gap: 12px;
+		min-height: 420px;
+		padding: 46px 22px 18px;
+		background:
+			linear-gradient(
+					to bottom,
+					rgba(118, 33, 128, 0.16) 0 1px,
+					transparent 1px
+				)
+				0 56px / 100% 70px,
+			rgba(255, 255, 255, 0.46);
+		overflow-x: auto;
+	}
+
+	.vla-axis {
+		position: relative;
+		display: block;
+		align-self: end;
+		height: 280px;
+		margin-bottom: 66px;
+		font-family: var(--font-sans);
+		font-size: 12px;
+		line-height: 1;
+		color: var(--purple-mid);
+	}
+
+	.vla-axis span {
+		position: absolute;
+		right: 0;
+		transform: translateY(-50%);
+	}
+
+	.vla-axis span:nth-child(1) {
+		top: 0;
+	}
+
+	.vla-axis span:nth-child(2) {
+		top: 25%;
+	}
+
+	.vla-axis span:nth-child(3) {
+		top: 50%;
+	}
+
+	.vla-axis span:nth-child(4) {
+		top: 75%;
+	}
+
+	.vla-axis span:nth-child(5) {
+		top: 100%;
+	}
+
+	.vla-bar {
+		display: grid;
+		grid-template-rows: 1fr auto;
+		gap: 12px;
+		min-width: 82px;
+		height: 100%;
+		transition:
+			opacity 160ms ease,
+			filter 160ms ease;
+	}
+
+	.vla-chart.is-filtering .vla-bar {
+		opacity: 0.36;
+	}
+
+	.vla-chart.is-filtering .vla-bar.is-baseline,
+	.vla-chart.is-filtering .vla-bar.is-highlighted {
+		opacity: 1;
+		filter: saturate(1.06);
+	}
+
+	.vla-bar-plot {
+		position: relative;
+		height: 280px;
+		align-self: end;
+		border-bottom: 1px solid rgba(45, 18, 51, 0.68);
+	}
+
+	.vla-bar-fill {
+		position: absolute;
+		left: 50%;
+		bottom: 0;
+		width: min(54px, 68%);
+		transform: translateX(-50%);
+		background: #7b5ea7;
+		border: 1px solid rgba(26, 26, 26, 0.8);
+		border-bottom: 0;
+		transition:
+			border-color 160ms ease,
+			filter 160ms ease;
+	}
+
+	.vla-bar.is-baseline .vla-bar-fill,
+	.vla-bar.is-highlighted .vla-bar-fill {
+		border-color: var(--purple-deep);
+		filter: brightness(1.03);
+	}
+
+	.vla-bar-fill strong {
+		position: absolute;
+		left: 50%;
+		top: -42px;
+		transform: translateX(-50%);
+		font-size: 14px;
+		white-space: nowrap;
+		color: var(--purple-deep);
+	}
+
+	.vla-error,
+	.vla-error-cap {
+		position: absolute;
+		left: 50%;
+		z-index: 2;
+		background: #1a1a1a;
+		transform: translateX(-50%);
+	}
+
+	.vla-error {
+		width: 2px;
+	}
+
+	.vla-error-cap {
+		width: 18px;
+		height: 2px;
+	}
+
+	.vla-bar > span {
+		min-height: 54px;
+		font-size: 13px;
+		line-height: 1.18;
+		text-align: center;
+		color: var(--purple-deep);
+		font-weight: 650;
+		transition: color 160ms ease;
+	}
+
+	.vla-bar.is-baseline > span {
+		color: var(--purple);
+	}
+
+	.insight-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 28px;
+		margin-top: 34px;
+	}
+
+	.insight-grid div {
+		padding: 20px;
+		border: 1px solid var(--purple-line);
+		background: rgba(255, 255, 255, 0.44);
+		transition:
+			background 160ms ease,
+			border-color 160ms ease;
+	}
+
+	.insight-grid div:hover {
+		border-color: rgba(112, 64, 160, 0.52);
+		background: rgba(244, 237, 248, 0.78);
+	}
+
+	.insight-grid span {
+		display: block;
+		font-family: var(--font-sans);
+		font-weight: 700;
+		color: var(--purple);
+	}
+
+	.insight-grid p {
+		margin: 12px 0 0;
+		font-size: 15px;
+		line-height: 1.62;
+	}
+
+	.cotrain-sources {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 18px;
+		margin-top: 36px;
+	}
+
+	.cotrain-source {
+		display: flex;
+		flex-direction: column;
+		border: 1px solid var(--purple-line);
+		background: rgba(255, 255, 255, 0.48);
+		overflow: hidden;
+	}
+
+	.cotrain-icon-frame {
+		display: block;
+		flex: 0 0 auto;
+		width: 100%;
+		height: clamp(220px, 24vw, 280px);
+		background: rgba(246, 236, 249, 0.5);
+		border-bottom: 1px solid var(--purple-line);
+	}
+
+	.cotrain-icon-frame img {
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+		padding: 18px;
+	}
+
+	.cotrain-source > div:not(.cotrain-icon-frame) {
+		flex: 1 1 auto;
+		padding: 18px;
+	}
+
+	.cotrain-source h3 {
+		font-size: 22px;
+		line-height: 1.08;
+		font-weight: 500;
+	}
+
+	.cotrain-source strong {
+		display: block;
+		margin-top: 12px;
+		font-family: var(--font-sans);
+		font-size: 12px;
+
+		color: var(--purple);
+	}
+
+	.cotrain-source p {
+		margin: 10px 0 0;
+		font-size: 14px;
+		line-height: 1.54;
+		color: var(--ink-muted);
+		text-align: left;
+		text-wrap: pretty;
+		hyphens: auto;
+		-webkit-hyphens: auto;
+	}
+
+	.capability-matrix {
+		display: grid;
+		grid-template-columns: minmax(180px, 0.9fr) minmax(190px, 1.1fr) repeat(
+				2,
+				minmax(140px, 0.8fr)
+			);
+		margin-top: 34px;
+		border: 1px solid var(--purple-line);
+		background: rgba(255, 255, 255, 0.48);
+		overflow: hidden;
+	}
+
+	.capability-matrix > div {
+		min-height: 64px;
+		padding: 16px;
+		border-right: 1px solid var(--purple-line);
+		border-bottom: 1px solid var(--purple-line);
+		line-height: 1.45;
+	}
+
+	.capability-matrix > div:nth-child(4n) {
+		border-right: 0;
+	}
+
+	.capability-matrix > div:nth-last-child(-n + 4) {
+		border-bottom: 0;
+	}
+
+	.matrix-head {
+		font-family: var(--font-sans);
+		font-size: 12px;
+
+		color: var(--purple);
+		background: rgba(246, 236, 249, 0.62);
+	}
+
+	.capability-matrix strong,
+	.capability-matrix span {
+		display: block;
+	}
+
+	.capability-matrix span {
+		margin-top: 4px;
+		color: var(--ink-muted);
+		font-size: 14px;
+	}
+
+	.cotrain-summary {
+		display: grid;
+		grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.4fr);
+		gap: 34px;
+		margin-top: 34px;
+		padding: 22px;
+		border: 1px solid var(--purple-line);
+		background: rgba(255, 255, 255, 0.48);
+	}
+
+	.cotrain-summary > div:first-child span {
+		display: block;
+		font-family: var(--font-sans);
+		font-size: 23px;
+		line-height: 1.28;
+		font-weight: 700;
+		color: var(--purple);
+	}
+
+	.cotrain-summary > div:first-child p {
+		margin: 12px 0 0;
+		font-size: 15px;
+		line-height: 1.58;
+		color: var(--ink-muted);
+	}
+
+	.cotrain-bars {
+		display: grid;
+		gap: 14px;
+	}
+
+	.cotrain-bar > div:first-child {
+		display: flex;
+		justify-content: space-between;
+		gap: 14px;
+	}
+
+	.cotrain-bar strong {
+		font-size: 15px;
+		color: var(--purple-deep);
+		font-weight: 700;
+	}
+
+	.cotrain-bar span {
+		font-family: var(--font-sans);
+		font-size: 22px;
+		line-height: 1;
+		color: var(--purple-deep);
+	}
+
+	.cotrain-progress-track {
+		position: relative;
+		display: block;
+		height: 9px;
+		margin-top: 8px;
+		border-radius: 999px;
+		background: var(--progress-track);
+		overflow: hidden;
+	}
+
+	.cotrain-progress-track::after {
+		content: "";
+		position: absolute;
+		inset: 0 auto 0 0;
+		width: var(--progress-fill, 0%);
+		height: 100%;
+		background: var(--progress-gradient);
+		border-radius: 999px;
+	}
+
+	.cotrain-bar p {
+		margin: 6px 0 0;
+		font-size: 13px;
+		line-height: 1.4;
+		color: var(--ink-muted);
+	}
+
+	.wide-note {
+		padding: 22px 24px;
+	}
+
+	.wide-note p {
+		margin: 0;
+	}
+
+	.system-card {
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+
+	.system-video-frame,
+	.wild-video-frame {
+		position: relative;
+		overflow: hidden;
+		border-radius: 4px;
+		background: #f2edf6;
+	}
+
+	.system-copy {
+		display: flex;
+		flex: 1;
+		flex-direction: column;
+		padding: 16px;
+	}
+
+	.method-title {
+		font-weight: 500;
+	}
+
+	.method-title-featured {
+		color: var(--purple);
+		font-weight: 700;
+	}
+
+	.method-title-sub {
+		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas,
+			"Liberation Mono", monospace;
+		font-size: 0.76em;
+		font-weight: 400;
+		letter-spacing: 0;
+	}
+
+	.system-card video,
+	.system-video-frame {
+		border-radius: 0;
+	}
+
+	.system-copy p {
+		margin: 10px 0 0;
+		font-size: 14px;
+		line-height: 1.52;
+	}
+
+	.system-metrics {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin-top: 0;
+	}
+
+	.system-metrics span {
+		padding: 7px 9px;
+		border: 1px solid var(--purple-line);
+		border-radius: 4px;
+		background: #f5edf8;
+		font-size: 12px;
+		color: var(--purple);
+	}
+
+	.system-progress {
+		margin-top: auto;
+		padding-top: 18px;
+	}
+
+	.system-progress > div:first-child {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 16px;
+	}
+
+	.system-progress span {
+		font-family: var(--font-sans);
+		font-size: 12px;
+
+		color: var(--purple);
+	}
+
+	.system-progress strong {
+		font-family: var(--font-sans);
+		font-size: 24px;
+		line-height: 1;
+		color: var(--purple-deep);
+	}
+
+	.system-progress-track {
+		position: relative;
+		display: block;
+		width: 100%;
+		height: 10px;
+		margin-top: 10px;
+		background: var(--progress-track);
+		overflow: hidden;
+		border-radius: 999px;
+	}
+
+	.system-progress-track::after {
+		content: "";
+		position: absolute;
+		inset: 0 auto 0 0;
+		width: var(--progress-fill, 0%);
+		height: 100%;
+		background: var(--progress-gradient);
+		border-radius: 999px;
+	}
+
+	.wild-section {
+		padding-bottom: 30px;
+	}
+
+	.wild-video {
+		margin-top: 36px;
+		width: min(900px, calc(100vw - 36px));
+		margin-left: auto;
+		margin-right: auto;
+	}
+
+	.wild-video video {
+		border: 1px solid rgba(102, 8, 116, 0.2);
+	}
+
+	.wild-video strong {
+		display: block;
+		margin-top: 14px;
+		font-family: var(--font-sans);
+		font-size: clamp(26px, 3vw, 38px);
+		line-height: 1.08;
+		font-weight: 500;
+	}
+
+	.wild-video p {
+		margin: 18px 0 0;
+	}
+
+	@media (max-width: 1180px) {
+		.floating-toc {
+			position: fixed;
+			top: 18px;
+			right: 18px;
+			width: auto;
+			max-width: calc(100vw - 220px);
+		}
+	}
+
+	@media (max-width: 980px) {
+		.floating-toc {
+			position: static;
+			width: auto;
+			margin: 22px 18px 0 auto;
+			max-width: 360px;
+		}
+
+		.task-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			width: min(820px, calc(100vw - 36px));
+			gap: 14px;
+		}
+
+		.stat-band,
+		.video-comparison,
+		.system-videos,
+		.cotrain-sources,
+		.insight-grid {
+			grid-template-columns: repeat(2, 1fr);
+		}
+
+		.cotrain-summary {
+			grid-template-columns: 1fr;
+		}
+
+		.vla-chart {
+			grid-template-columns: 40px repeat(9, minmax(74px, 1fr));
+			gap: 10px;
+			padding: 44px 18px 18px;
+			-webkit-overflow-scrolling: touch;
+		}
+
+		.vla-bar {
+			min-width: 74px;
+		}
+
+		.vla-bar-fill {
+			width: min(48px, 68%);
+		}
+
+		.metric-grid {
+			grid-template-columns: minmax(170px, 1fr) repeat(
+					3,
+					minmax(126px, 1fr)
+				);
+			overflow-x: auto;
+		}
+
+		.wild-video {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	@media (max-width: 680px) {
+		.sticky-nav {
+			display: none;
+		}
+
+		.brand {
+			flex: 0 0 auto;
+			margin-right: 10px;
+		}
+
+		.sticky-nav-links {
+			flex: 1 1 auto;
+			min-width: 0;
+			overflow-x: auto;
+			overscroll-behavior-x: contain;
+			scrollbar-width: none;
+		}
+
+		.sticky-nav-links::-webkit-scrollbar {
+			display: none;
+		}
+
+		.sticky-nav-links a {
+			flex: 0 0 auto;
+			padding: 8px 9px;
+			white-space: nowrap;
+		}
+
+		.topbar,
+		.hero,
+		.stat-band,
+		.content {
+			padding-left: 18px;
+			padding-right: 18px;
+		}
+
+		.hero {
+			min-height: 100svh;
+			min-height: 100dvh;
+			padding-top: 66px;
+			padding-bottom: 48px;
+		}
+
+		h1 {
+			margin-top: 18px;
+			font-size: clamp(24px, 7vw, 32px);
+			line-height: 1.16;
+		}
+
+		h1 .purple {
+			margin-bottom: 10px;
+			font-size: clamp(58px, 18vw, 88px);
+			line-height: 1;
+		}
+
+		h2 {
+			font-size: clamp(24px, 8vw, 32px);
+			line-height: 1.14;
+		}
+
+		h3 {
+			font-size: 22px;
+		}
+
+		.paper-section {
+			scroll-margin-top: 66px;
+			padding: 64px 0 68px;
+		}
+
+		.paper-section:last-child {
+			padding-bottom: 34px;
+		}
+
+		.overview {
+			padding-top: 64px;
+		}
+
+		.paper-section > p:not(.section-kicker),
+		.chart-head p,
+		.video-panel p,
+		.insight-grid p,
+		.wide-note p,
+		.system-copy p,
+		.wild-video p {
+			font-size: 16px;
+			line-height: 1.62;
+		}
+
+		.hero-actions {
+			gap: 12px;
+			margin-top: 28px;
+		}
+
+		.hero-link {
+			flex: 1 1 calc(50% - 6px);
+			min-width: 132px;
+			min-height: 50px;
+			padding: 0 16px;
+			font-size: 17px;
+		}
+
+		.stat-band,
+		.video-comparison,
+		.system-videos,
+		.insight-grid,
+		.finding-strip,
+		.cotrain-sources,
+		.cotrain-summary {
+			grid-template-columns: 1fr;
+		}
+
+		.task-grid {
+			grid-template-columns: 1fr;
+			width: min(480px, calc(100vw - 36px));
+			margin-top: 32px;
+		}
+
+		.pipeline-transition {
+			margin-top: 34px !important;
+		}
+
+		.teaser-figure {
+			margin-top: 28px;
+		}
+
+		.cotrain-icon-frame {
+			height: 220px;
+		}
+
+		.video-comparison,
+		.system-videos,
+		.wild-video {
+			width: min(560px, calc(100vw - 36px));
+		}
+
+		.video-panel h3,
+		.system-copy h3,
+		.cotrain-source h3 {
+			font-size: 21px;
+		}
+
+		.vla-chart {
+			grid-template-columns: 36px repeat(9, minmax(68px, 1fr));
+			gap: 8px;
+			min-height: 390px;
+			padding: 42px 14px 16px;
+		}
+
+		.vla-axis {
+			font-size: 11px;
+		}
+
+		.vla-bar {
+			min-width: 68px;
+		}
+
+		.vla-bar > span {
+			font-size: 12px;
+		}
+
+		.cotrain-summary > div:first-child span {
+			font-size: 21px;
+		}
+
+		.capability-matrix {
+			grid-template-columns: repeat(4, minmax(160px, 1fr));
+			overflow-x: auto;
+		}
+
+		.chart-head {
+			align-items: start;
+			grid-template-columns: 1fr;
+			gap: 18px;
+			padding: 18px;
+		}
+
+		.chart-head > div:not(.task-selector) {
+			order: 0;
+		}
+
+		.task-selector {
+			justify-self: stretch;
+			width: 100%;
+		}
+
+		.metric-grid {
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			grid-template-rows: none;
+			overflow: hidden;
+			border-top: 1px solid var(--purple-line);
+		}
+
+		.grid-label:first-child {
+			display: none;
+		}
+
+		.grid-label.metric {
+			min-height: 58px;
+			justify-items: center;
+			padding: 10px 6px;
+			background: rgba(246, 236, 249, 0.62);
+			text-align: center;
+			border-right: 1px solid var(--purple-line);
+		}
+
+		.grid-label.metric:nth-child(4) {
+			border-right: 0;
+		}
+
+		.grid-label.metric span {
+			font-size: 14px;
+		}
+
+		.grid-label.metric small {
+			font-size: 11px;
+			line-height: 1.15;
+		}
+
+		.method-cell {
+			grid-column: 1 / -1;
+			min-height: auto;
+			padding: 12px 14px;
+			background: #efe3f5;
+			border-right: 0;
+		}
+
+		.metric-cell {
+			min-height: 78px;
+			justify-items: start;
+			padding: 12px 8px;
+			text-align: left;
+			border-right: 1px solid var(--purple-line);
+		}
+
+		.metric-cell:nth-child(4n) {
+			border-right: 0;
+		}
+
+		.metric-value {
+			font-size: 21px;
+		}
+
+		.metric-cell i {
+			width: 100%;
+		}
+
+		.task-card {
+			/* grid handles sizing */
+		}
+	}
+
+	@media (max-width: 440px) {
+		.sticky-nav {
+			padding-left: 12px;
+			padding-right: 8px;
+		}
+
+		.brand {
+			font-size: 12px;
+		}
+
+		.sticky-nav-links a {
+			padding: 8px;
+		}
+
+		h1 {
+			font-size: clamp(22px, 7.5vw, 28px);
+		}
+
+		h1 .purple {
+			font-size: clamp(50px, 18vw, 72px);
+		}
+
+		.hero-actions {
+			gap: 10px;
+		}
+
+		.hero-link {
+			min-width: 0;
+			padding: 0 12px;
+			font-size: 15px;
+		}
+
+		.hero-link-icon,
+		.hero-link-icon svg {
+			width: 20px;
+			height: 20px;
+			flex-basis: 20px;
+		}
+
+		.task-video .family-tag,
+		.speed-tag {
+			font-size: 9px;
+		}
+
+		.cotrain-icon-frame {
+			height: 190px;
+		}
+	}
+</style>
