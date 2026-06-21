@@ -13,33 +13,31 @@ const heroLinks = [
 		label: "Arxiv",
 		href: "#",
 		icon: "arxiv",
-		iconUrl: "https://cdn.simpleicons.org/arxiv",
+		iconUrl: "https://cdn.simpleicons.org/arxiv/white",
 	},
 	{
 		label: "Paper",
 		href: paperUrl,
 		icon: "paper",
-		iconUrl:
-			"https://api.iconify.design/bi:filetype-pdf.svg?color=%23e5252a",
+		iconUrl: "https://api.iconify.design/bi:filetype-pdf.svg?color=%23fff",
 	},
 	{
 		label: "Code",
 		href: "#",
 		icon: "code",
-		iconUrl: "https://cdn.simpleicons.org/github",
+		iconUrl: "https://cdn.simpleicons.org/github/white",
 	},
 	{
 		label: "Dataset",
 		href: "https://huggingface.co/datasets/OpenHLM/OpenHLM-data",
 		icon: "dataset",
-		iconUrl: "https://cdn.simpleicons.org/databricks",
+		iconUrl: "https://cdn.simpleicons.org/databricks/white",
 	},
 	{
 		label: "Models",
 		href: "https://huggingface.co/OpenHLM/OpenHLM-ckpts",
 		icon: "huggingface",
-		iconUrl:
-			"https://huggingface.co/front/assets/huggingface_logo-noborder.svg",
+		iconUrl: "https://api.iconify.design/simple-icons:huggingface.svg?color=%23fff",
 	},
 ];
 
@@ -539,7 +537,7 @@ const systemMethods = [
 								>
 									<img
 										src={link.iconUrl}
-										alt={link.label}
+										alt=""
 										width="24"
 										height="24"
 										style="display: block;"
@@ -1800,6 +1798,12 @@ const systemMethods = [
 		stroke-width: 1.8;
 		stroke-linecap: round;
 		stroke-linejoin: round;
+	}
+
+	.hero-link-icon img {
+		width: 24px;
+		height: 24px;
+		object-fit: contain;
 	}
 
 	.teaser-wrap,
