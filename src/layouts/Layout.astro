@@ -20,6 +20,7 @@ const withBase = (path: string) => `${base}${base.endsWith('/') ? '' : '/'}${pat
 			content="OpenHLM: an empirical recipe for whole-body humanoid loco-manipulation."
 		/>
 		<title>OpenHLM | Whole-Body Humanoid Loco-Manipulation</title>
+		<slot name="head" />
 	</head>
 	<body>
 		<slot />

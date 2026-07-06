@@ -434,6 +434,7 @@ const systemMethods = [
 		name: "OpenHLM (HuMI Co-Training)",
 		short: "OpenHLM",
 		src: "openhlm/video/ablation/ours_fruits.mp4",
+		alternateSrc: "openhlm/video/ablation/ours_fruits_perturbation.mp4",
 		progress: 87.5,
 		time: "1.14 h",
 	},
@@ -452,9 +453,25 @@ const systemMethods = [
 		time: "2.70 h",
 	},
 ];
+
+const alternateSystemVideoSrcs = systemMethods.flatMap((method) =>
+	method.alternateSrc ? [method.alternateSrc] : [],
+);
 ---
 
 <Layout>
+	<Fragment slot="head">
+		{
+			alternateSystemVideoSrcs.map((src) => (
+				<link
+					rel="preload"
+					as="video"
+					type="video/mp4"
+					href={withBase(src)}
+				/>
+			))
+		}
+	</Fragment>
 	<main class="site-shell" id="top">
 		<nav class="sticky-nav" aria-label="Site navigation">
 			<a href="#top" class="brand">OpenHLM</a>
@@ -618,16 +635,79 @@ const systemMethods = [
 						systemMethods.map((method) => (
 							<section class="system-card">
 								<div class="system-video-frame">
-									<video
-										autoplay
-										muted
-										loop
-										playsinline
-										controls
-										preload="metadata"
-										src={withBase(method.src)}
-									/>
+									{
+										method.alternateSrc ? (
+											<div
+												class="system-video-stack"
+												data-system-video-stack
+											>
+												<video
+													class="system-video-variant active"
+													data-system-video="nominal"
+													autoplay
+													muted
+													loop
+													playsinline
+													controls
+													preload="auto"
+													src={withBase(method.src)}
+												/>
+												<video
+													class="system-video-variant"
+													data-system-video="disturbed"
+													autoplay
+													muted
+													loop
+													playsinline
+													preload="auto"
+													src={withBase(method.alternateSrc)}
+													aria-hidden="true"
+													tabindex="-1"
+												/>
+											</div>
+										) : (
+											<video
+												autoplay
+												muted
+												loop
+												playsinline
+												controls
+												preload="metadata"
+												src={withBase(method.src)}
+											/>
+										)
+									}
 									<span class="speed-tag">autonomous 2x</span>
+									{
+										method.alternateSrc && (
+											<div
+												class="system-video-switch"
+												aria-label={`${method.short} disturbance condition`}
+											>
+												<div>
+													<button
+														type="button"
+														class="active"
+														data-system-video-toggle
+														data-video-target="nominal"
+														aria-pressed="true"
+														aria-label="Show nominal video without disturbance"
+													>
+														Nominal
+													</button>
+													<button
+														type="button"
+														data-system-video-toggle
+														data-video-target="disturbed"
+														aria-pressed="false"
+														aria-label="Show disturbed video"
+													>
+														Disturbed
+													</button>
+												</div>
+											</div>
+										)
+									}
 								</div>
 								<div class="system-copy">
 									<h3
@@ -1123,12 +1203,45 @@ const systemMethods = [
 	};
 
 	if (document.readyState === "loading") {
-		document.addEventListener("DOMContentLoaded", startMutedVideos, {
-			once: true,
-		});
+		document.addEventListener(
+			"DOMContentLoaded",
+			() => {
+				startMutedVideos();
+			},
+			{ once: true },
+		);
 	} else {
 		startMutedVideos();
 	}
+
+	document.querySelectorAll("[data-system-video-toggle]").forEach((button) => {
+		button.addEventListener("click", () => {
+			const card = button.closest(".system-card");
+			const target = button.dataset.videoTarget;
+			if (!card || !target) return;
+
+			card.querySelectorAll("[data-system-video-toggle]").forEach(
+				(option) => {
+					const isActive = option === button;
+					option.classList.toggle("active", isActive);
+					option.setAttribute("aria-pressed", String(isActive));
+				},
+			);
+
+			card.querySelectorAll("[data-system-video]").forEach((video) => {
+				const isActive = video.dataset.systemVideo === target;
+				video.classList.toggle("active", isActive);
+				video.controls = isActive;
+				video.setAttribute("aria-hidden", String(!isActive));
+				video.tabIndex = isActive ? 0 : -1;
+				setVideoSpeed(video);
+				if (isActive) {
+					video.currentTime = 0;
+				}
+				video.play().catch(() => {});
+			});
+		});
+	});
 
 	const nav = document.querySelector(".sticky-nav");
 	const updateNavTone = () => {
@@ -2926,6 +3039,27 @@ const systemMethods = [
 		background: #f2edf6;
 	}
 
+	.system-video-stack {
+		position: relative;
+		aspect-ratio: 16 / 9;
+		background: #f2edf6;
+	}
+
+	.system-video-stack .system-video-variant {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 120ms ease;
+	}
+
+	.system-video-stack .system-video-variant.active {
+		opacity: 1;
+		pointer-events: auto;
+	}
+
 	.system-copy {
 		display: flex;
 		flex: 1;
@@ -2933,7 +3067,61 @@ const systemMethods = [
 		padding: 16px;
 	}
 
+	.system-video-switch {
+		position: absolute;
+		top: 10px;
+		right: 10px;
+		z-index: 4;
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		max-width: calc(100% - 20px);
+		padding: 4px;
+		border: 1px solid rgba(64, 24, 76, 0.16);
+		border-radius: 4px;
+		background: rgba(251, 248, 253, 0.78);
+		backdrop-filter: blur(10px);
+		box-shadow: 0 8px 18px rgba(32, 15, 38, 0.12);
+	}
+
+	.system-video-switch > div {
+		display: flex;
+		gap: 3px;
+	}
+
+	.system-video-switch button {
+		min-width: 0;
+		border: 0;
+		border-radius: 3px;
+		background: transparent;
+		color: var(--purple-deep);
+		cursor: pointer;
+		font-family: var(--font-sans);
+		font-size: 10px;
+		font-weight: 700;
+		line-height: 1;
+		padding: 6px 8px;
+		transition:
+			background-color 160ms ease,
+			color 160ms ease;
+	}
+
+	.system-video-switch button.active {
+		background: var(--purple);
+		color: white;
+	}
+
+	.system-video-switch button:not(.active):hover {
+		background: rgba(120, 52, 151, 0.08);
+	}
+
+	.system-video-switch button:focus-visible {
+		outline: 2px solid var(--purple);
+		outline-offset: 2px;
+	}
+
 	.method-title {
+		margin-bottom: 8px;
 		font-weight: 500;
 	}
 
