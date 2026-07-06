@@ -8,6 +8,13 @@ const withBaseIfPresent = (path?: string) => (path ? withBase(path) : "");
 const paperUrl = withBase(
 	"openhlm/OpenHLM__An_Empirical_Recipe_for_Whole_Body_Humanoid_Loco_Manipulation.pdf",
 );
+const bibtexCitation = `@article{hu2026openhlm,
+  title={OpenHLM: An Empirical Recipe for Whole-Body Humanoid Loco-Manipulation},
+  author={Hu, Yingdong and Zhu, Haodong and Zheng, Boyuan and Hu, Yihang and Zhang, Tong and Chen, Zunhao and Zhao, Junming and Nai, Ruiqian and Gao, Yang},
+  journal={arXiv preprint arXiv:2606.22174},
+  year={2026}
+}`;
+
 const heroLinks = [
 	{
 		label: "Arxiv",
@@ -1078,6 +1085,17 @@ const systemMethods = [
 							))
 						}
 					</div>
+				</div>
+			</section>
+
+			<section class="paper-section" id="citation">
+				<h2>Citation</h2>
+				<p>
+					If you find OpenHLM useful in your research, please cite our
+					work:
+				</p>
+				<div class="bibtex-wrapper">
+					<pre class="bibtex-block"><code>{bibtexCitation}</code></pre>
 				</div>
 			</section>
 		</article>
@@ -2873,6 +2891,25 @@ const systemMethods = [
 
 	.wide-note p {
 		margin: 0;
+	}
+
+	.bibtex-block {
+		margin: 30px 0 0;
+		padding: 22px 24px;
+		border: 1px solid var(--purple-line);
+		border-radius: 4px;
+		background: rgba(246, 236, 249, 0.62);
+		color: var(--purple-deep);
+		overflow-x: auto;
+		white-space: pre;
+	}
+
+	.bibtex-block code {
+		font-family:
+			ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono",
+			monospace;
+		font-size: 14px;
+		line-height: 1.62;
 	}
 
 	.system-card {
